@@ -3,7 +3,7 @@ package ru.severstal.test
 import java.net.URL
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.{LongType, StringType, StructField, StructType, TimestampType}
-import org.apache.spark.sql.functions._
+import org.apache.spark.sql.functions.col
 
 object TagsCounting extends App {
 
@@ -12,8 +12,8 @@ object TagsCounting extends App {
     .appName("Severstal_test")
     .getOrCreate()
 
-  private var long_referance: URL = getClass.getClassLoader.getResource("long_short.csv")
-  private var rolls_referance: URL = getClass.getClassLoader.getResource("rolls_short.csv")
+  private var long_referance: URL = getClass.getClassLoader.getResource("long.csv")
+  private var rolls_referance: URL = getClass.getClassLoader.getResource("rolls.csv")
 
   val schemaLong = StructType(List(
     StructField("ts", TimestampType, nullable = true),
@@ -33,10 +33,6 @@ object TagsCounting extends App {
     .schema(schemaLong)
     .option("delimiter",";")
     .csv(long_referance.getPath)
-//  longDF.createOrReplaceGlobalTempView("long_view")
-
-//  longDF.show(false)
-//  longDF.printSchema()
 
   val rollsDF = sparkSession
     .read
@@ -44,29 +40,19 @@ object TagsCounting extends App {
     .schema(schemaRolls)
     .option("delimiter",";")
     .csv(rolls_referance.getPath)
-//  rollsDF.createOrReplaceGlobalTempView("long_view")
 
-//  rollsDF.show(false)
-//  rollsDF.printSchema()
-
-  val result = rollsDF.join(longDF, col("ts") between(col("roll_start"), col("roll_end")), "left")
+  val rollsAndLongLeftJoinDF = rollsDF.join(longDF, col("ts") between(col("roll_start"), col("roll_end")), "left")
       .drop("ts", "roll_start", "roll_end")
-  result.createOrReplaceTempView("tmp_view")
+  rollsAndLongLeftJoinDF.createOrReplaceTempView("tmp_view")
 
-  val result2 = sparkSession.sql("select roll_id, tag, percentile_approx(value, 0.5) as median, " +
-    "percentile_approx(value, 0.99) as 99_percentile, percentile_approx(value, 0.01) as 1_percentile from tmp_view group by roll_id, tag order by roll_id")
-//  result2.show(300, false)
+  val resultAggDF = sparkSession.sql("select roll_id, tag, max(value) as max, mean(value) as mean, percentile_approx(value, 0.5, 100) as median, " +
+    "percentile_approx(value, 0.99, 100) as 99_percentile, percentile_approx(value, 0.01, 100) as 1_percentile from tmp_view group by roll_id, tag order by roll_id")
 
-  val result3 = result
-    .groupBy("roll_id", "tag")
-      .agg(
-        max("value").as("max_value"),
-        mean("value").as("mean_value")
-      )
-  val result4 = result3.join(result2, Seq("roll_id", "tag"), "left")
-
-//  result.orderBy(col("roll_id")).coalesce(1).write.format("csv").save("H:\\res\\res5")
-//  result2.orderBy("roll_id").show(200, false)
-  result4.orderBy("roll_id").coalesce(1).write.format("csv").save("H:\\res\\res35")
+  resultAggDF
+    .orderBy("roll_id")
+    .coalesce(1)
+    .write
+    .format("csv")
+    .save("H:\\res\\finalScala")
 
 }
