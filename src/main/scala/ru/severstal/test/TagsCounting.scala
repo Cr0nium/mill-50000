@@ -51,17 +51,22 @@ object TagsCounting extends App {
 
   val result = rollsDF.join(longDF, col("ts") between(col("roll_start"), col("roll_end")), "left")
       .drop("ts", "roll_start", "roll_end")
+  result.createOrReplaceTempView("tmp_view")
 
-  val result2 = result
+  val result2 = sparkSession.sql("select roll_id, tag, percentile_approx(value, 0.5) as median, " +
+    "percentile_approx(value, 0.99) as 99_percentile, percentile_approx(value, 0.01) as 1_percentile from tmp_view group by roll_id, tag order by roll_id")
+//  result2.show(300, false)
+
+  val result3 = result
     .groupBy("roll_id", "tag")
       .agg(
         max("value").as("max_value"),
         mean("value").as("mean_value")
       )
-
+  val result4 = result3.join(result2, Seq("roll_id", "tag"), "left")
 
 //  result.orderBy(col("roll_id")).coalesce(1).write.format("csv").save("H:\\res\\res5")
 //  result2.orderBy("roll_id").show(200, false)
-  result2.orderBy("roll_id").coalesce(1).write.format("csv").save("H:\\res\\res27")
+  result4.orderBy("roll_id").coalesce(1).write.format("csv").save("H:\\res\\res35")
 
 }
