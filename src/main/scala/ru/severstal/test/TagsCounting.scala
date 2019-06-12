@@ -3,7 +3,7 @@ package ru.severstal.test
 import java.net.URL
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.{LongType, StringType, StructField, StructType, TimestampType}
-import org.apache.spark.sql.functions.col
+import org.apache.spark.sql.functions._
 
 object TagsCounting extends App {
 
@@ -54,10 +54,14 @@ object TagsCounting extends App {
 
   val result2 = result
     .groupBy("roll_id", "tag")
-      .max("value")
+      .agg(
+        max("value").as("max_value"),
+        mean("value").as("mean_value")
+      )
 
 
 //  result.orderBy(col("roll_id")).coalesce(1).write.format("csv").save("H:\\res\\res5")
-  result2.coalesce(1).write.format("csv").save("H:\\res\\res20")
+//  result2.orderBy("roll_id").show(200, false)
+  result2.orderBy("roll_id").coalesce(1).write.format("csv").save("H:\\res\\res27")
 
 }
