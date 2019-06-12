@@ -1,0 +1,6 @@
+rootProject.name = 'mill-50000'
+
+gradle.allprojects {
+    it.ext.sparkVersion = '2.3.0'
+}
+

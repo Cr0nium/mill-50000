@@ -1,0 +1,17 @@
+apply plugin: 'scala'
+
+group 'ru.severstal.test'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile 'org.scala-lang:scala-library:2.11.8'
+    compile group: 'org.apache.spark', name: 'spark-core_2.11', version: sparkVersion
+    compile group: 'org.apache.spark', name: 'spark-sql_2.11', version: sparkVersion
+    compile group: 'org.apache.spark', name: 'spark-hive_2.11', version: sparkVersion
+}
