@@ -34,7 +34,7 @@ object TagsCounting extends App {
     .csv(long_referance.getPath)
 //  longDF.createOrReplaceGlobalTempView("long_view")
 
-  longDF.show()
+  longDF.show(false)
   longDF.printSchema()
 
   val rollsDF = sparkSession
@@ -45,7 +45,7 @@ object TagsCounting extends App {
     .csv(rolls_referance.getPath)
 //  rollsDF.createOrReplaceGlobalTempView("long_view")
 
-  rollsDF.show()
+  rollsDF.show(false)
   rollsDF.printSchema()
 
 
