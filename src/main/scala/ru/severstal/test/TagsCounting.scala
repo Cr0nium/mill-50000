@@ -3,6 +3,7 @@ package ru.severstal.test
 import java.net.URL
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.{LongType, StringType, StructField, StructType, TimestampType}
+import org.apache.spark.sql.functions.col
 
 object TagsCounting extends App {
 
@@ -11,8 +12,8 @@ object TagsCounting extends App {
     .appName("Severstal_test")
     .getOrCreate()
 
-  private var long_referance: URL = getClass.getClassLoader.getResource("long.csv")
-  private var rolls_referance: URL = getClass.getClassLoader.getResource("rolls.csv")
+  private var long_referance: URL = getClass.getClassLoader.getResource("long_short.csv")
+  private var rolls_referance: URL = getClass.getClassLoader.getResource("rolls_short.csv")
 
   val schemaLong = StructType(List(
     StructField("ts", TimestampType, nullable = true),
@@ -34,8 +35,8 @@ object TagsCounting extends App {
     .csv(long_referance.getPath)
 //  longDF.createOrReplaceGlobalTempView("long_view")
 
-  longDF.show(false)
-  longDF.printSchema()
+//  longDF.show(false)
+//  longDF.printSchema()
 
   val rollsDF = sparkSession
     .read
@@ -45,8 +46,18 @@ object TagsCounting extends App {
     .csv(rolls_referance.getPath)
 //  rollsDF.createOrReplaceGlobalTempView("long_view")
 
-  rollsDF.show(false)
-  rollsDF.printSchema()
+//  rollsDF.show(false)
+//  rollsDF.printSchema()
 
+  val result = rollsDF.join(longDF, col("ts") between(col("roll_start"), col("roll_end")), "left")
+      .drop("ts", "roll_start", "roll_end")
+
+  val result2 = result
+    .groupBy("roll_id", "tag")
+      .max("value")
+
+
+//  result.orderBy(col("roll_id")).coalesce(1).write.format("csv").save("H:\\res\\res5")
+  result2.coalesce(1).write.format("csv").save("H:\\res\\res20")
 
 }
