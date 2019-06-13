@@ -3,7 +3,7 @@ package ru.severstal.test
 import java.net.URL
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.types.{LongType, StringType, StructField, StructType, TimestampType}
-import org.apache.spark.sql.functions.col
+import org.apache.spark.sql.functions.{broadcast, col}
 
 object TagsCounting extends App {
 
@@ -41,7 +41,7 @@ object TagsCounting extends App {
     .option("delimiter",";")
     .csv(rolls_referance.getPath)
 
-  val rollsAndLongLeftJoinDF = rollsDF.join(longDF, col("ts") between(col("roll_start"), col("roll_end")), "left")
+  val rollsAndLongLeftJoinDF = longDF.join(broadcast(rollsDF), col("ts") between(col("roll_start"), col("roll_end")), "right")
       .drop("ts", "roll_start", "roll_end")
   rollsAndLongLeftJoinDF.createOrReplaceTempView("tmp_view")
 
@@ -53,6 +53,7 @@ object TagsCounting extends App {
     .coalesce(1)
     .write
     .format("csv")
+    .option("header", "true")
     .save("H:\\res\\finalScala")
 
 }
