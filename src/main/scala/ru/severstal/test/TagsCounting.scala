@@ -33,6 +33,7 @@ object TagsCounting extends App {
     .schema(schemaLong)
     .option("delimiter",";")
     .csv(long_referance.getPath)
+    .repartitionByRange(400, col("ts"))
 
   val rollsDF = sparkSession
     .read
@@ -40,6 +41,9 @@ object TagsCounting extends App {
     .schema(schemaRolls)
     .option("delimiter",";")
     .csv(rolls_referance.getPath)
+    .repartitionByRange(10, col("roll_start"))
+    .cache()
+
 
   val rollsAndLongLeftJoinDF = longDF.join(broadcast(rollsDF), col("ts") between(col("roll_start"), col("roll_end")), "right")
       .drop("ts", "roll_start", "roll_end")
@@ -47,6 +51,7 @@ object TagsCounting extends App {
 
   val resultAggDF = sparkSession.sql("select roll_id, tag, max(value) as max, mean(value) as mean, percentile_approx(value, 0.5, 100) as median, " +
     "percentile_approx(value, 0.99, 100) as 99_percentile, percentile_approx(value, 0.01, 100) as 1_percentile from tmp_view group by roll_id, tag order by roll_id")
+  resultAggDF.explain()
 
   resultAggDF
     .orderBy("roll_id")
@@ -54,6 +59,6 @@ object TagsCounting extends App {
     .write
     .format("csv")
     .option("header", "true")
-    .save("H:\\res\\finalScala")
+    .save("H:\\res\\finalScala2")
 
 }
