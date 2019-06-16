@@ -10,10 +10,11 @@ object TagsCounting extends App {
   val sparkSession: SparkSession = SparkSession.builder
     .master("local[*]")
     .appName("Severstal_test")
+    .config("spark.driver.memory", "6g")
+    .config("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+    .config("spark.sql.objectHashAggregate.sortBased.fallbackThreshold", 1500)
+    .config("spark.default.parallelism", 48)
     .getOrCreate()
-
-  sparkSession.conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
-  sparkSession.conf.set("spark.sql.objectHashAggregate.sortBased.fallbackThreshold", 55000)
 
   private var long_referance: URL = getClass.getClassLoader.getResource("long.csv")
   private var rolls_referance: URL = getClass.getClassLoader.getResource("rolls.csv")
@@ -44,15 +45,26 @@ object TagsCounting extends App {
     .schema(schemaRolls)
     .option("delimiter",";")
     .csv(rolls_referance.getPath)
-//    .repartitionByRange(12, col("roll_start"))
-//    .cache()
 
-  val rollsAndLongLeftJoinDF = longDF.join(broadcast(rollsDF), col("ts") between(col("roll_start"), col("roll_end")), "right")
+  val rollsAndLongRightJoinDF = longDF.join(broadcast(rollsDF), col("ts") between(col("roll_start"), col("roll_end")), "right")
       .drop("ts", "roll_start", "roll_end")
-  rollsAndLongLeftJoinDF.createOrReplaceTempView("tmp_view")
+  rollsAndLongRightJoinDF.createOrReplaceTempView("tmp_view")
 
-  val resultAggDF = sparkSession.sql("select roll_id, tag, max(value) as max, mean(value) as mean, percentile_approx(value, 0.5) as median, " +
-    "percentile_approx(value, 0.99) as 99_percentile, percentile_approx(value, 0.01) as 1_percentile from tmp_view group by roll_id, tag order by roll_id")
+  val resultAggDF = sparkSession.sql(
+    "select " +
+                "roll_id, " +
+                "tag, " +
+                "max(value) as max, " +
+                "mean(value) as mean, " +
+                "percentile_approx(value, 0.5) as median, " +
+                "percentile_approx(value, 0.99) as 99_percentile, " +
+                "percentile_approx(value, 0.01) as 1_percentile " +
+            "from " +
+                "tmp_view " +
+            "group by " +
+                "roll_id, tag " +
+            "order by " +
+                "roll_id")
 
   resultAggDF
     .orderBy("roll_id")
@@ -60,6 +72,6 @@ object TagsCounting extends App {
     .write
     .format("csv")
     .option("header", "true")
-    .save("H:\\res\\finalScala12")
+    .save("H:\\res\\finalScala")
 
 }
